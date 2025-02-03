@@ -10,12 +10,7 @@ import sys
 def fetch_table(begin, end):
 
     base_url = "https://barttorvik.com/trank.php"
-    
-    proxies = {
-        'http': 'socks5://127.0.0.1:9050',
-        'https': 'socks5://127.0.0.1:9050'
-    }
-    
+        
     params = {
         "year": end[:4],
         "sort": "",
@@ -33,7 +28,7 @@ def fetch_table(begin, end):
         "mingames": 0
     }
 
-    response = requests.get(base_url, params=params)#, proxies=proxies)
+    response = requests.get(base_url, params=params)
     if response.status_code != 200:
         print(f"Request failed with status code {response.status_code}")
         return None
@@ -85,10 +80,7 @@ def fetch_table(begin, end):
 def get_stats(year):
     
     df = pd.DataFrame()
-    proxies = {
-        'http': 'socks5://127.0.0.1:9050',
-        'https': 'socks5://127.0.0.1:9050'
-    }
+
     base_url = "https://www.sports-reference.com/cbb/boxscores/index.cgi?"
     
     for month, year in [(11, year), (12, year), (1, year+1), (2, year+1), (3, year+1), (4, year+1)]:
@@ -119,7 +111,7 @@ def get_stats(year):
                 "year": year
             }
 
-            response = requests.get(base_url, params=params)#, proxies=proxies)
+            response = requests.get(base_url, params=params)
             while response.status_code != 200:
                 print(f"Request failed for day {date} with status code {response.status_code}")
                 i = input()
@@ -127,7 +119,7 @@ def get_stats(year):
                     q_flag = True
                     break
                 else:
-                    response = requests.get(base_url, params=params, proxies=proxies)
+                    response = requests.get(base_url, params=params)
                     
             if q_flag:
                 continue
@@ -158,11 +150,9 @@ def get_stats(year):
                 home_team_stats = table[table["Team"] == home_team].add_prefix("home_").reset_index(drop=True)
                 away_team_stats = table[table["Team"] == away_team].add_prefix("away_").reset_index(drop=True)
                 
-                if home_team_stats.empty:
+                if home_team_stats.empty or away_team_stats.empty:
                     continue
-                if away_team_stats.empty:
-                    continue    
-                
+
                 game_df = game_info.join(home_team_stats).join(away_team_stats)
                     
                 df = pd.concat([df, game_df], ignore_index=True)
