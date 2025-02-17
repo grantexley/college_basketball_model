@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from name_mapping import name_lookup
 import sys
+import time
 
 def fetch_table(begin, end):
 
@@ -37,7 +38,7 @@ def fetch_table(begin, end):
 
     table = soup.find("table")
     if not table:
-        print("Could not find 'scheduletable' in the HTML. Possibly JavaScript-driven or no data.")
+        print("Could not find 'scheduletable' in the HTML.")
         return None
 
     header_row = table.find("thead")
@@ -88,22 +89,18 @@ def get_stats(year):
             
             date = f"{year:04d}{month:02d}{day:02d}"
             
-            begin_date = subtract_n_days(date)
-            if not begin_date: 
-                continue
+            end_date = subtract_n_days(date, 1)
+            if not end_date: continue
             
-            table = fetch_table(begin_date, date)
-            q_flag = False
+            begin_date = subtract_n_days(date)
+            if not begin_date: continue
+            
+            table = fetch_table(begin_date, end_date)
             while table is None:
                 print(f"TABLE IS NONE for {date}")
-                i = input()
-                if i.strip() == 'q':
-                    q_flag = True
-                    break
-                else:
-                    table = fetch_table(begin_date, date)
-            if q_flag:
-                continue
+                print(f"waiting 5 min started {datetime.now().strftime('%H:%M:%S')}")
+                time.sleep(300) 
+                table = fetch_table(begin_date, end_date)
             
             params = {
                 "month": month,
@@ -114,15 +111,9 @@ def get_stats(year):
             response = requests.get(base_url, params=params)
             while response.status_code != 200:
                 print(f"Request failed for day {date} with status code {response.status_code}")
-                i = input()
-                if i.strip() == 'q':
-                    q_flag = True
-                    break
-                else:
-                    response = requests.get(base_url, params=params)
-                    
-            if q_flag:
-                continue
+                print(f"waiting 5 min started {datetime.now().strftime('%H:%M:%S')}")
+                time.sleep(300) 
+                response = requests.get(base_url, params=params)
             
             soup = BeautifulSoup(response.text, "html.parser")
             
@@ -141,8 +132,6 @@ def get_stats(year):
                 home_team = name_lookup.get(home_team, home_team)
                 away_team = name_lookup.get(away_team, away_team)
                 
-                
-                print(f"Added row {len(df)}")
                         
                 game_info = pd.DataFrame([{"date": date, "home_team": home_team, "home_score": home_score, "away_team": away_team, "away_score": away_score}])
                 game_info.reset_index(drop=True)
@@ -151,9 +140,12 @@ def get_stats(year):
                 away_team_stats = table[table["Team"] == away_team].add_prefix("away_").reset_index(drop=True)
                 
                 if home_team_stats.empty or away_team_stats.empty:
+                    print(f'home_team {home_team} ||| away_team {away_team}')
                     continue
 
                 game_df = game_info.join(home_team_stats).join(away_team_stats)
+                
+                print(f"Added row {len(df)}")
                     
                 df = pd.concat([df, game_df], ignore_index=True)
             
@@ -172,9 +164,10 @@ def subtract_n_days(date, days=61):
     return new_date.strftime('%Y%m%d')
     
 def main():
-    year = int(sys.argv[1])
-    df = get_stats(year)
-    df.to_csv(f"data/{year}-{year+1}_data.csv", index=False, encoding="utf-8")
+    years = map(int, sys.argv[1:])
+    for year in years:
+        df = get_stats(year)
+        df.to_csv(f"data/{year}-{year+1}_data.csv", index=False, encoding="utf-8")
     
     
 
