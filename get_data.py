@@ -171,7 +171,7 @@ def subtract_n_days(date, days=61):
 def main():
     year = int(sys.argv[1])
     df = get_stats_year(year)
-    df.to_csv(f"data1/{year}-{year+1}_data.csv", index=False, encoding="utf-8")
+    df.to_csv(f"data/{year}-{year+1}_data.csv", index=False, encoding="utf-8")
     
     
 
